@@ -54,6 +54,7 @@ def createInputTable():
 
     
     inputTableFrame.pack(ipadx=5)
+  
 
 def createOutputTable():
     
@@ -72,8 +73,52 @@ def createOutputTable():
     if (calcFrameElements["entry"].get()==""): 
         messagebox.showerror("Empty !","please, fill f(x) value !")
         return
- 
-    calcDiffTable()
+    
+    xValues = []
+    for x in inputTableValues :
+        xValues.append(float(x[0].get()))
+    
+    xVal = float(calcFrameElements["entry"].get()) # value of X to abtain f(x) for...
+    x0 = float(inputTableValues[0][0].get()) #first value of X
+    xn = float(inputTableValues[len(inputTableValues)-1][0].get()) #last value of X
+    Xc = float(inputTableValues[int(len(inputTableValues)/2)][0].get()) # value of centerd X
+    Xbc = float(inputTableValues[int(len(inputTableValues)/2)-1][0].get()) # value bafore centerd X
+    Xac = float(inputTableValues[int(len(inputTableValues)/2)+1][0].get()) # value after centerd X
+    
+    if xVal in xValues : # if found in input table
+        diffTableContainer["method"] = Label(outputTableFrame,text="Found in input table !",font=("Arial",10))
+        result = float(inputTableValues[xValues.index(xVal)][1].get())
+        diffTableContainer["result"] = Label(outputTableFrame,text=(f"f ({xVal}) = {result}"),font=("Arial",12,"bold"))
+        colSpan=len(differenceTableValues)+2
+        diffTableContainer["method"].grid(column=0,row=1,columnspan=colSpan)
+        diffTableContainer["result"].grid(column=0,row=2,columnspan=colSpan)
+        outputTableFrame.pack() 
+        return
+    elif (len(xValues)%2 != 0 and (( (xVal < Xc) and (xVal > Xbc) ) or ( (xVal > Xc) and (xVal <Xac) ) ) ): # if xVal near center of table 
+        diffTableContainer["method"] = Label(outputTableFrame,text="Using Sterling centeral difference formula",font=("Arial",10))
+        #use sterling
+        calcDivTable()
+        tableType="div."
+        result = calcSterling()
+    elif ( abs( x0- xVal ) < abs( xn - xVal) ) :
+        calcDiffTable()
+        result = calcNewtonForward()
+        diffTableContainer["method"] = Label(outputTableFrame,text="Using Newton forward difference formula",font=("Arial",10))
+        tableType="diff."
+    elif ( abs( x0- xVal ) > abs( xn - xVal) ):
+        calcDiffTable()
+        result = calcNewtonBackward()
+        diffTableContainer["method"] = Label(outputTableFrame,text="Using Newton backward difference formula",font=("Arial",10))
+        tableType="diff."
+    else :
+        diffTableContainer["method"] = Label(outputTableFrame,text="Odd input count needed for central diffrence",font=("Arial",10))
+        result="Unknown !"
+        diffTableContainer["result"] = Label(outputTableFrame,text=(f"f ({xVal}) = {result}"),font=("Arial",12,"bold"))
+        colSpan=len(differenceTableValues)+2
+        diffTableContainer["method"].grid(column=0,row=1,columnspan=colSpan)
+        diffTableContainer["result"].grid(column=0,row=2,columnspan=colSpan)
+        outputTableFrame.pack()
+        return 
     
     for i in range(len(differenceTableValues)+2) : # +2 for x and y columns
         #create X and Y columns
@@ -89,7 +134,7 @@ def createOutputTable():
                     diffTableContainer[f"col{i}-row{j}"]= Label(diffTableContainer[f"col{i}"],text= inputValues[j],font=("Arial",10))
                     diffTableContainer[f"col{i}-row{j}"].grid(column=i,row=j)
         else:
-            diffTableContainer[f"col{i}"] = LabelFrame(outputTableFrame, text=f"{ordinal[i-1]} diff.",font=("Arial",10,"bold"))
+            diffTableContainer[f"col{i}"] = LabelFrame(outputTableFrame, text=f"{ordinal[i-1]} {tableType}",font=("Arial",10,"bold"))
             tmp=0
             for l in differenceTableValues[i-2] :
                 diffTableContainer[f"col{i}-row{j}"]= Label(diffTableContainer[f"col{i}"],text=l,font=("Arial",10))
@@ -100,21 +145,7 @@ def createOutputTable():
         diffTableContainer[f"col{i}"].grid(row=0,column=i)
     outputTableFrame.pack()
     
-    xVal = float(calcFrameElements["entry"].get())
-    x0 = float(inputTableValues[0][0].get())
-    xn = float(inputTableValues[len(inputTableValues)-1][0].get())
-    
-    if ( abs( x0- xVal ) < abs( xn - xVal) ) :
-        result = calcNewtonForward()
-        diffTableContainer["method"] = Label(outputTableFrame,text="Using Newton forward difference formula",font=("Arial",10))
-    elif ( abs( x0- xVal ) > abs( xn - xVal) ):
-        result = calcNewtonBackward()
-        diffTableContainer["method"] = Label(outputTableFrame,text="Using Newton backward difference formula",font=("Arial",10))
-    else :
-        diffTableContainer["method"] = Label(outputTableFrame,text="Can't calculate values in the middle of the table",font=("Arial",10))
-        result="Unknown !"
-         
-    
+
     diffTableContainer["result"] = Label(outputTableFrame,text=(f"f ({xVal}) = {result}"),font=("Arial",12,"bold"))
     colSpan=len(differenceTableValues)+2
     diffTableContainer["method"].grid(column=0,row=1,columnspan=colSpan)
@@ -146,6 +177,34 @@ def calcDiffTable():
         
         differenceTableValues.append(deltaYValues)
 
+#calculate the divided table 
+def calcDivTable():
+    
+    differenceTableValues.clear()
+    
+    #obtains y values from the input table
+    yValues=[]
+    for i in inputTableValues :
+        yValues.append(float(i[1].get()))
+    
+    x0 = float(inputTableValues[0][0].get())
+    x1 = float(inputTableValues[1][0].get())
+    h  = x1-x0 
+    
+    #calculate divided y values 
+    divYValues=[]
+    for j in range(len(yValues)-1) :
+        divYValues.append((yValues[j+1]-yValues[j])/h)  
+      
+    differenceTableValues.append(divYValues)     
+    
+    for i in range(len(yValues)-2) :
+        divYValues=[]   
+        for k in range(len(differenceTableValues[i])-1) :
+            divYValues.append( (differenceTableValues[i][k+1] - differenceTableValues[i][k]) / ( (i+2)*h ) )
+        
+        differenceTableValues.append(divYValues)
+    
 #to return s(s-1)(s-2)....
 def factOfS(rep) :
     if rep==0 :
@@ -186,6 +245,47 @@ def calcNewtonBackward():
         p_x += ((factOfSVal / math.factorial(i+1) ) * deltaY)
     return p_x
 
+def specialFactS(rep): # S(S^2 - 1^2)(s^2 - 2^2)...
+    
+    if rep==0 :
+        return "S"
+    elif rep > 0 : 
+        return (f"(S^(2)-{rep}^(2))"+" * "+specialFactS(rep-1))  
+    
+def calcSterling():
+    
+    xVal=float(calcFrameElements["entry"].get()) # desired value to obtain f(x) at
+    x0 = float(inputTableValues[0][0].get()) 
+    x1 = float(inputTableValues[1][0].get())
+    centerIndex = int(len(inputTableValues)/2) 
+    xc = float(inputTableValues[centerIndex][0].get()) # x value at center of table
+    h  = x1-x0
+    sVal = (xVal-xc)/h
+    f_xc = float(inputTableValues[centerIndex][1].get()) # f(x) at center of the table 
+    p_x = f_xc
+    evenSItiration = 0
+    oddSItiration = 0
+    times= len(differenceTableValues)
+    for i in range(times) :
+        current_H = h**(i+1)
+        
+        if (i%2 == 0) :
+            divY_1  = float(differenceTableValues[i][((int(len(differenceTableValues[i])/2) - 1))])
+            divY_2  = float(differenceTableValues[i][((int(len(differenceTableValues[i])/2) ))])
+            current_div = (divY_1 + divY_2) / 2
+            termOfSval = Expression(specialFactS(evenSItiration))(sVal)
+            evenSItiration += 1
+            
+        else :
+            current_div  = float(differenceTableValues[i][(int(len(differenceTableValues[i])/2))])
+            termOfSval = Expression(specialFactS(oddSItiration) + " * S")(sVal)
+            oddSItiration += 1
+        
+        finalValue = current_H * current_div * termOfSval
+        p_x += finalValue
+    return p_x
+
+
 def validate(action, index, value_if_allowed,
                        prior_value, text, validation_type, trigger_type, widget_name):
         if value_if_allowed:
@@ -200,7 +300,7 @@ def validate(action, index, value_if_allowed,
    
 main_window = Tk()
 main_window.title("Newton interpolation calculator")
-main_window.geometry("600x600")
+main_window.minsize(600,600)
 main_window.iconbitmap(".\\images\\NIC.ico")
 
 numValidate = (main_window.register(validate),'%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W') #number validation
